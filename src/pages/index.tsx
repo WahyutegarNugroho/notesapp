@@ -103,7 +103,7 @@ export default function Welcome() {
       
       {/* Footer */}
       <footer className="bg-card py-12 border-t border-border text-center text-muted-foreground text-sm">
-        <p>© 2026 Notes App. Diciptakan dengan keunggulan oleh Tim AI.</p>
+        <p>© 2026 whtsn. All rights reserved.</p>
       </footer>
     </div>
   );
