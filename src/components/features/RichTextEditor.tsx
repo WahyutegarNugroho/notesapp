@@ -8,7 +8,7 @@ import { Bold, Italic, List, ListOrdered, Strikethrough, Image as ImageIcon, Loa
 import ImageExtension from '@tiptap/extension-image';
 import { useStorage } from '../../hooks/useStorage';
 import { useNotes } from '../../hooks/useNotes';
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import getSuggestion from './suggestion';
 
@@ -153,8 +153,15 @@ export const RichTextEditor = ({ content, onChange, noteId }: { content: string,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
     },
-    immediatelyRender: false,
   });
+
+  useEffect(() => {
+    if (editor && !editor.isDestroyed && content) {
+      if (editor.isEmpty && content !== '<p></p>') {
+        editor.commands.setContent(content);
+      }
+    }
+  }, [editor, content]);
 
   return (
     <div className="rounded-md border border-border focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background overflow-hidden">
