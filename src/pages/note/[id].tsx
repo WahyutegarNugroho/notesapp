@@ -197,8 +197,39 @@ export default function NoteDetail() {
     setIsPublic(newStatus);
     setPublicSlug(newSlug);
     
-    // Auto-save will pick this up
-    toast.info(newStatus ? 'Catatan dipublikasikan' : 'Catatan diprivat');
+    // Save immediately
+    try {
+      setIsSaving(true);
+      const res = await fetch(`/api/notes/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
+        },
+        body: JSON.stringify({
+          is_public: newStatus,
+          public_slug: newSlug
+        })
+      });
+
+      if (!res.ok) throw new Error('Gagal mengubah status visibilitas');
+      
+      toast.success(newStatus ? 'Catatan dipublikasikan' : 'Catatan diprivat');
+      
+      // Update current note state to prevent auto-save loop
+      setNote((prev: any) => ({
+        ...prev,
+        is_public: newStatus,
+        public_slug: newSlug
+      }));
+    } catch (e: any) {
+      toast.error(e.message);
+      // Revert state on error
+      setIsPublic(!newStatus);
+      setPublicSlug(publicSlug);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   if (isLoading || isFetching) {
