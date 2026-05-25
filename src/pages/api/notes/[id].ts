@@ -34,6 +34,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(403).json({ error: 'Forbidden' });
   }
 
+  if (req.method === 'GET') {
+    return res.status(200).json(existingNote);
+  }
+
   if (req.method === 'PUT') {
     try {
       const { title, content, is_public, public_slug, folder_id, reminder_at } = req.body;
