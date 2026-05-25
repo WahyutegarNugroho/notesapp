@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client-js"
+  engineType = "library"
+  output   = "../src/generated/client"
+}
+
+datasource db {
+  provider  = "postgresql"
+}
+
+model Folder {
+  id          String    @id @default(uuid())
+  user_id     String    
+  name        String    
+  parent_id   String?   
+  created_at  DateTime  @default(now()) 
+  updated_at  DateTime  @default(now()) @updatedAt 
+
+  parent      Folder?   @relation("FolderToFolder", fields: [parent_id], references: [id])
+  children    Folder[]  @relation("FolderToFolder")
+  notes       Note[]
+
+  @@map("folders")
+}
+
+model Note {
+  id          String       @id @default(uuid()) 
+  user_id     String       
+  folder_id   String?      
+  title       String       
+  content     String?      
+  is_public   Boolean      @default(false)
+  public_slug String?      @unique 
+  reminder_at DateTime?    
+  created_at  DateTime     @default(now()) 
+  updated_at  DateTime     @default(now()) @updatedAt 
+
+  folder      Folder?      @relation(fields: [folder_id], references: [id], onDelete: SetNull)
+  attachments Attachment[]
+  note_tags   NoteTag[]
+
+  @@map("notes")
+}
+
+model Attachment {
+  id         String   @id @default(uuid())
+  note_id    String
+  file_url   String
+  file_type  String
+  created_at DateTime @default(now())
+
+  note       Note     @relation(fields: [note_id], references: [id], onDelete: Cascade)
+
+  @@map("attachments")
+}
+
+model Tag {
+  id         Int        @id @default(autoincrement())
+  user_id    String     // References Supabase auth.users.id
+  name       String
+
+  note_tags  NoteTag[]
+
+  @@map("tags")
+}
+
+model NoteTag {
+  note_id String
+  tag_id  Int
+
+  note    Note @relation(fields: [note_id], references: [id], onDelete: Cascade)
+  tag     Tag  @relation(fields: [tag_id], references: [id], onDelete: Cascade)
+
+  @@id([note_id, tag_id])
+  @@map("note_tags")
+}
