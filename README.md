@@ -1,40 +1,105 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/pages/api-reference/create-next-app).
+# 📝 MyNotes App
 
-## Getting Started
+**Nama project:** MyNotes App — Aplikasi Catatan Berbasis Web
 
-First, run the development server:
+**Deskripsi singkat:**  
+MyNotes adalah aplikasi catatan online full-stack yang memungkinkan pengguna membuat, mengedit, mengelola, dan berbagi catatan dengan format rich text. Dibangun menggunakan Next.js, Supabase, dan Prisma, aplikasi ini mendukung organisasi folder, tagging, lampiran file, dark mode, serta ekspor catatan ke Markdown/PDF.
 
+**Problem yang diselesaikan:**  
+- Pengguna membutuhkan aplikasi catatan yang cepat, modern, dan bisa diakses dari mana saja via browser
+- Catatan biasa (plain text) tidak cukup — perlu dukungan rich text, checklist, gambar, dan video
+- Kesulitan mengorganisir catatan dalam jumlah banyak — solusi dengan folder bersarang dan tagging
+- Kebutuhan berbagi catatan secara publik tanpa harus membuat akun untuk pembaca
+- File attachment yang memakan penyimpanan lokal — solusi dengan cloud storage (Supabase Storage)
+
+**Fitur utama:**  
+- ✨ Rich text editor (Tiptap) — bold, italic, strikethrough, heading, bullet list, numbered list, task list
+- 📂 Organisasi folder (nested/hierarchical)
+- 🏷️ Tagging catatan dengan filter tag
+- 🔗 Berbagi catatan publik via link unik (`/p/[slug]`)
+- 📎 Lampirkan gambar (JPEG/PNG/WebP) dan video (MP4/WebM) — otomatis dikompres
+- 🔍 Pencarian catatan (judul & isi) dengan debounce
+- ⏰ Pengingat (reminder) dengan date-time picker
+- 📤 Ekspor catatan ke Markdown (`.md`) atau PDF
+- 🔗 Note linking — ketik `[` untuk mention/link ke catatan lain
+- 🗑️ Soft-delete & trash — restore atau hapus permanen
+- 🌙 Dark mode + 5 tema kustom (Default, Dracula, Nord, Sepia, Ocean)
+- 🔐 Autentikasi email/password (Supabase Auth) — login, register, forgot/reset password
+- ⚡ Infinite scroll dengan cursor-based pagination
+- 🧹 Pembersihan file orphan di storage otomatis via cron endpoint
+
+**Kelebihan:**  
+- ✅ Full-stack dalam satu repo — mudah deploy
+- ✅ Rich text editor yang powerful (Tiptap v3)
+- ✅ Performance cepat dengan SWR + infinite scroll
+- ✅ Dark mode dan multiple themes
+- ✅ Keamanan: rate limiting, validasi Zod, session-based auth
+- ✅ Fitur ekspor Markdown & PDF built-in
+
+**Kekurangan:**  
+- ❌ Belum ada mode offline / PWA
+- ❌ Belum ada kolaborasi real-time (multi-user edit)
+- ❌ Belum ada dukungan mobile app native
+- ❌ Masih menggunakan Pages Router (belum migrasi ke App Router)
+
+**Tech Stack & Alasan:**
+
+| Teknologi | Kegunaan | Alasan |
+|---|---|---|
+| **Next.js 16** (Pages Router) | Framework React full-stack | SSR, routing, API routes dalam satu project |
+| **TypeScript** | Bahasa pemrograman | Type safety, maintainability |
+| **Prisma 7** | ORM / database | Type-safe query, migration mudah, support PostgreSQL |
+| **Supabase** (Auth + Storage + PostgreSQL) | Backend as a Service | Auth siap pakai, storage file, database managed |
+| **Tailwind CSS v4** | Utility CSS framework | Styling cepat, konsisten, mudah dikustom |
+| **shadcn/ui** | Komponen UI | Aksesible, kustomizable, tidak berat |
+| **Tiptap v3** | Rich text editor | Ekstensibel, berbasis ProseMirror, ringan |
+| **SWR v2** | Data fetching / caching | Revalidasi otomatis, caching, infinite scroll |
+| **Zod v4** | Validasi data | Type-safe, skema validasi runtime |
+| **date-fns v4** | Manipulasi tanggal | Tree-shakeable, dukungan locale Indonesia |
+| **Vitest** | Unit testing | Cepat, kompatibel dengan Vite/Next.js |
+
+**Cara Install / Run:**
+
+1. **Clone repositori**
+   ```bash
+   git clone https://github.com/WahyutegarNugroho/notesapp.git
+   cd notesapp
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Buat project Supabase**  
+   Daftar/login di [supabase.com](https://supabase.com), buat project baru.
+
+4. **Konfigurasi environment variables**  
+   Salin `.env.example` ke `.env` dan isi dengan credential Supabase-mu:
+   ```bash
+   cp .env.example .env
+   ```
+
+5. **Jalankan migrasi database**
+   ```bash
+   npx prisma generate
+   npx prisma db push
+   ```
+
+6. **Jalankan development server**
+   ```bash
+   npm run dev
+   ```
+   Buka [http://localhost:3000](http://localhost:3000)
+
+7. **Build untuk production**
+   ```bash
+   npm run build
+   npm start
+   ```
+
+**Testing:**
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm test          # Jalankan unit tests
+npm run lint      # Cek kode dengan ESLint
 ```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `pages/index.tsx`. The page auto-updates as you edit the file.
-
-[API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.ts`.
-
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) instead of React pages.
-
-This project uses [`next/font`](https://nextjs.org/docs/pages/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn-pages-router) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/pages/building-your-application/deploying) for more details.
