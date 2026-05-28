@@ -1,45 +1,34 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { prisma } from '../../../lib/prisma';
-import { supabase } from '../../../services/supabase';
+import { FolderCreateSchema } from '../../../lib/validations';
+import { z } from 'zod';
+import { requireAuth } from '../../../lib/apiAuth';
+import { getFolders, createFolder } from '../../../services/folderService';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) return res.status(401).json({ error: 'Missing Authorization header' });
-
-  const token = authHeader.split(' ')[1];
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-
-  if (authError || !user) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
+  const user = await requireAuth(req, res);
+  if (!user) return;
 
   if (req.method === 'GET') {
     try {
-      const folders = await prisma.folder.findMany({
-        where: { user_id: user.id },
-        include: {
-          children: true
-        }
-      });
+      const folders = await getFolders(user.id);
       return res.status(200).json(folders);
-    } catch (error: any) {
-      return res.status(500).json({ error: error.message });
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : 'Internal Server Error';
+      return res.status(500).json({ error: msg });
     }
   }
 
   if (req.method === 'POST') {
     try {
-      const { name, parent_id } = req.body;
-      const folder = await prisma.folder.create({
-        data: {
-          name,
-          parent_id: parent_id || null,
-          user_id: user.id
-        }
-      });
+      const parsed = FolderCreateSchema.parse(req.body);
+      const folder = await createFolder(user.id, parsed);
       return res.status(201).json(folder);
-    } catch (error: any) {
-      return res.status(500).json({ error: error.message });
+    } catch (error: unknown) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.issues[0].message });
+      }
+      const msg = error instanceof Error ? error.message : 'Internal Server Error';
+      return res.status(500).json({ error: msg });
     }
   }
 

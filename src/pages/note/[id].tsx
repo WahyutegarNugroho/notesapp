@@ -3,29 +3,53 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { DashboardLayout } from '../../layouts/DashboardLayout';
 import { RichTextEditor } from '../../components/features/RichTextEditor';
-import { ArrowLeft, Save, Loader2, Share2, Globe, Lock, Folder, Bell, Trash2 } from 'lucide-react';
+import { ConfirmDialog } from '../../components/ui/confirm-dialog';
+import { ArrowLeft, Save, Loader2, Share2, Globe, Lock, Folder, Bell, Trash2, ImageIcon, Paperclip, X } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { toast } from 'sonner';
 import { useAuth } from '../../contexts/AuthContext';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import { useNote } from '../../hooks/useNote';
+import { useFolders } from '../../hooks/useFolders';
+import { useStorage } from '../../hooks/useStorage';
+import { nanoid } from 'nanoid';
+import { apiFetch } from '../../utils/apiFetch';
 
 export default function NoteDetail() {
   const router = useRouter();
   const { id } = router.query;
-  const { session, isLoading } = useAuth();
+  const { session, isLoading: authLoading } = useAuth();
   
-  const [note, setNote] = useState<any>(null);
+  const { note, isLoading: isFetching, updateNote, deleteNote: deleteNoteApi } = useNote(id as string);
+  const { folders } = useFolders();
+  const { uploadFile } = useStorage();
+
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [isPublic, setIsPublic] = useState(false);
   const [publicSlug, setPublicSlug] = useState('');
   const [folderId, setFolderId] = useState<string | null>(null);
   const [reminderAt, setReminderAt] = useState<Date | null>(null);
-  
   const [isSaving, setIsSaving] = useState(false);
-  const [isFetching, setIsFetching] = useState(true);
-  const [folders, setFolders] = useState<any[]>([]);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [attachments, setAttachments] = useState<Array<{ id: string; file_url: string; file_type: string }>>([]);
+  const [isUploadAttachment, setIsUploadAttachment] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Sync note data to local state once loaded
+  useEffect(() => {
+    if (note) {
+      setTitle(note.title || '');
+      setContent(note.content || '');
+      setIsPublic(note.is_public || false);
+      setPublicSlug(note.public_slug || '');
+      setFolderId(note.folder_id || null);
+      setReminderAt(note.reminder_at ? new Date(note.reminder_at) : null);
+      setAttachments(note.attachments || []);
+    }
+  }, [note]);
 
   // Refs for tracking changes
   const titleRef = useRef(title);
@@ -34,6 +58,7 @@ export default function NoteDetail() {
   const publicSlugRef = useRef(publicSlug);
   const folderIdRef = useRef(folderId);
   const reminderAtRef = useRef(reminderAt);
+  const isSavingRef = useRef(false);
 
   useEffect(() => {
     titleRef.current = title;
@@ -45,125 +70,56 @@ export default function NoteDetail() {
   }, [title, content, isPublic, publicSlug, folderId, reminderAt]);
 
   useEffect(() => {
-    if (!isLoading && !session) {
+    if (!authLoading && !session) {
       router.push('/');
     }
-  }, [session, isLoading, router]);
-
-  useEffect(() => {
-    if (session && id) {
-      fetchNote();
-      fetchFolders();
-    }
-  }, [session, id]);
-
-  const fetchFolders = async () => {
-    try {
-      const res = await fetch('/api/folders', {
-        headers: { 'Authorization': `Bearer ${session?.access_token}` }
-      });
-      if (res.ok) {
-        setFolders(await res.json());
-      }
-    } catch (e) {}
-  };
-
-  const fetchNote = async () => {
-    setIsFetching(true);
-    try {
-      const res = await fetch(`/api/notes/${id}`, {
-        headers: {
-          'Authorization': `Bearer ${session?.access_token}`
-        }
-      });
-      
-      if (!res.ok) {
-        if (res.status === 404) {
-          toast.error('Catatan tidak ditemukan');
-          router.push('/dashboard');
-        }
-        throw new Error('Failed to fetch note');
-      }
-      
-      const data = await res.json();
-      setNote(data);
-      setTitle(data.title || '');
-      setContent(data.content || '');
-      setIsPublic(data.is_public || false);
-      setPublicSlug(data.public_slug || '');
-      setFolderId(data.folder_id || null);
-      setReminderAt(data.reminder_at ? new Date(data.reminder_at) : null);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsFetching(false);
-    }
-  };
+  }, [session, authLoading, router]);
 
   const saveNote = async () => {
+    if (isSavingRef.current) return;
     if (!titleRef.current.trim()) {
       toast.error('Judul tidak boleh kosong');
       return;
     }
 
+    isSavingRef.current = true;
     setIsSaving(true);
     try {
-      const res = await fetch(`/api/notes/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`
-        },
-        body: JSON.stringify({
-          title: titleRef.current,
-          content: contentRef.current,
-          is_public: isPublicRef.current,
-          public_slug: publicSlugRef.current,
-          folder_id: folderIdRef.current,
-          reminder_at: reminderAtRef.current
-        })
+      const updated = await updateNote({
+        title: titleRef.current,
+        content: contentRef.current,
+        is_public: isPublicRef.current,
+        public_slug: publicSlugRef.current,
+        folder_id: folderIdRef.current,
+        reminder_at: reminderAtRef.current ? reminderAtRef.current.toISOString() : null
       });
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'Failed to save');
-      }
-      
-      toast.success('Catatan disimpan');
-    } catch (error: any) {
-      toast.error(error.message);
+      return updated;
     } finally {
+      isSavingRef.current = false;
       setIsSaving(false);
     }
   };
 
-  const deleteNote = async () => {
-    if (!confirm('Apakah Anda yakin ingin menghapus catatan ini?')) return;
-    
+  const handleDeleteNote = async () => {
+    setIsDeleting(true);
     try {
-      const res = await fetch(`/api/notes/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${session?.access_token}`
-        }
-      });
-
-      if (!res.ok) {
-        throw new Error('Gagal menghapus catatan');
-      }
-
-      toast.success('Catatan berhasil dihapus');
+      await deleteNoteApi();
       router.push('/dashboard');
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch {
+      toast.error('Gagal menghapus catatan');
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteConfirmOpen(false);
     }
   };
 
-  // Auto-save logic
+  // Auto-save with guard against concurrent saves
   useEffect(() => {
     if (isFetching || !note) return;
 
     const timeoutId = setTimeout(() => {
+      if (isSavingRef.current) return;
+
       const hasChanges = 
         title !== note.title || 
         content !== (note.content || '') ||
@@ -174,65 +130,70 @@ export default function NoteDetail() {
 
       if (hasChanges) {
         saveNote();
-        // Update current note state to prevent infinite saving loop
-        setNote((prev: any) => ({
-          ...prev, 
-          title, 
-          content, 
-          is_public: isPublic, 
-          public_slug: publicSlug,
-          folder_id: folderId,
-          reminder_at: reminderAt
-        }));
       }
-    }, 2000); // Auto-save after 2 seconds of inactivity
+    }, 2000);
 
     return () => clearTimeout(timeoutId);
   }, [title, content, isPublic, publicSlug, folderId, reminderAt, isFetching, note]);
 
   const togglePublicStatus = async () => {
+    if (isSavingRef.current) return;
     const newStatus = !isPublic;
-    const newSlug = newStatus && !publicSlug ? `note-${id?.toString().substring(0, 8)}` : publicSlug;
-    
-    setIsPublic(newStatus);
-    setPublicSlug(newSlug);
-    
-    // Save immediately
-    try {
-      setIsSaving(true);
-      const res = await fetch(`/api/notes/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`
-        },
-        body: JSON.stringify({
-          is_public: newStatus,
-          public_slug: newSlug
-        })
-      });
+    const newSlug = newStatus && !publicSlug ? nanoid(10) : publicSlug;
 
-      if (!res.ok) throw new Error('Gagal mengubah status visibilitas');
-      
-      toast.success(newStatus ? 'Catatan dipublikasikan' : 'Catatan diprivat');
-      
-      // Update current note state to prevent auto-save loop
-      setNote((prev: any) => ({
-        ...prev,
+    isSavingRef.current = true;
+    setIsSaving(true);
+
+    try {
+      await updateNote({
         is_public: newStatus,
         public_slug: newSlug
-      }));
-    } catch (e: any) {
-      toast.error(e.message);
-      // Revert state on error
-      setIsPublic(!newStatus);
-      setPublicSlug(publicSlug);
+      });
+      setIsPublic(newStatus);
+      setPublicSlug(newSlug);
+      toast.success(newStatus ? 'Catatan dipublikasikan' : 'Catatan diprivat');
+    } catch {
+      toast.error('Gagal mengubah status publik');
     } finally {
+      isSavingRef.current = false;
       setIsSaving(false);
     }
   };
 
-  if (isLoading || isFetching) {
+  const handleUploadAttachment = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !id) return;
+
+    setIsUploadAttachment(true);
+    try {
+      const result = await uploadFile(file, id as string);
+      if (result) {
+        const newAtt = await apiFetch('/api/notes/attachments', {
+          method: 'POST',
+          body: JSON.stringify({ note_id: id, file_url: result.url, file_type: result.type })
+        });
+        setAttachments(prev => [...prev, newAtt]);
+        toast.success('Lampiran berhasil ditambahkan');
+      }
+    } catch (err) {
+      toast.error('Gagal mengunggah lampiran');
+    } finally {
+      setIsUploadAttachment(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleRemoveAttachment = async (attachmentId: string) => {
+    try {
+      await apiFetch(`/api/notes/attachments/${attachmentId}`, { method: 'DELETE' });
+      setAttachments(prev => prev.filter(a => a.id !== attachmentId));
+      toast.success('Lampiran berhasil dihapus');
+    } catch (err) {
+      toast.error('Gagal menghapus lampiran');
+    }
+  };
+
+  if (authLoading || isFetching) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-full min-h-[50vh]">
@@ -318,7 +279,7 @@ export default function NoteDetail() {
               <Button 
                 size="sm" 
                 variant="destructive"
-                onClick={deleteNote}
+                onClick={() => setIsDeleteConfirmOpen(true)}
                 className="bg-red-600 hover:bg-red-700 text-white"
               >
                 <Trash2 className="w-4 h-4 mr-2" />
@@ -399,6 +360,71 @@ export default function NoteDetail() {
               </div>
             </div>
 
+            {/* Attachments Section */}
+            {attachments.length > 0 && (
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+                  <Paperclip className="w-4 h-4" /> Lampiran ({attachments.length})
+                </h3>
+                <div className="flex flex-wrap gap-3">
+                  {attachments.map((att) => (
+                    <div key={att.id} className="relative group">
+                      {att.file_type.startsWith('image/') ? (
+                        <div className="relative">
+                          <img
+                            src={att.file_url}
+                            alt="Lampiran"
+                            className="w-24 h-24 object-cover rounded-lg border border-border"
+                          />
+                          <button
+                            onClick={() => handleRemoveAttachment(att.id)}
+                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 bg-muted px-3 py-2 rounded-lg text-sm">
+                          <ImageIcon className="w-4 h-4" />
+                          <span className="text-muted-foreground">Video</span>
+                          <button
+                            onClick={() => handleRemoveAttachment(att.id)}
+                            className="text-red-500 hover:text-red-600 ml-1"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Upload Attachment Button */}
+            <div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploadAttachment}
+              >
+                {isUploadAttachment ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Paperclip className="w-4 h-4 mr-2" />
+                )}
+                {isUploadAttachment ? 'Mengunggah...' : 'Tambah Lampiran'}
+              </Button>
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept="image/jpeg,image/png,image/webp,video/mp4,video/webm"
+                onChange={handleUploadAttachment}
+              />
+            </div>
+
             <div className="tiptap-content bg-background p-1 rounded-lg">
               <RichTextEditor 
                 content={content}
@@ -409,6 +435,18 @@ export default function NoteDetail() {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={isDeleteConfirmOpen}
+        onOpenChange={setIsDeleteConfirmOpen}
+        title="Hapus Catatan"
+        description="Apakah Anda yakin ingin menghapus catatan ini? Tindakan ini tidak dapat dibatalkan."
+        confirmLabel={isDeleting ? 'Menghapus...' : 'Ya, Hapus'}
+        cancelLabel="Batal"
+        variant="destructive"
+        onConfirm={handleDeleteNote}
+        isLoading={isDeleting}
+      />
     </DashboardLayout>
   );
 }

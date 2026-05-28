@@ -2512,6 +2512,7 @@ export namespace Prisma {
     is_public: boolean | null
     public_slug: string | null
     reminder_at: Date | null
+    deleted_at: Date | null
     created_at: Date | null
     updated_at: Date | null
   }
@@ -2525,6 +2526,7 @@ export namespace Prisma {
     is_public: boolean | null
     public_slug: string | null
     reminder_at: Date | null
+    deleted_at: Date | null
     created_at: Date | null
     updated_at: Date | null
   }
@@ -2538,6 +2540,7 @@ export namespace Prisma {
     is_public: number
     public_slug: number
     reminder_at: number
+    deleted_at: number
     created_at: number
     updated_at: number
     _all: number
@@ -2553,6 +2556,7 @@ export namespace Prisma {
     is_public?: true
     public_slug?: true
     reminder_at?: true
+    deleted_at?: true
     created_at?: true
     updated_at?: true
   }
@@ -2566,6 +2570,7 @@ export namespace Prisma {
     is_public?: true
     public_slug?: true
     reminder_at?: true
+    deleted_at?: true
     created_at?: true
     updated_at?: true
   }
@@ -2579,6 +2584,7 @@ export namespace Prisma {
     is_public?: true
     public_slug?: true
     reminder_at?: true
+    deleted_at?: true
     created_at?: true
     updated_at?: true
     _all?: true
@@ -2665,6 +2671,7 @@ export namespace Prisma {
     is_public: boolean
     public_slug: string | null
     reminder_at: Date | null
+    deleted_at: Date | null
     created_at: Date
     updated_at: Date
     _count: NoteCountAggregateOutputType | null
@@ -2695,6 +2702,7 @@ export namespace Prisma {
     is_public?: boolean
     public_slug?: boolean
     reminder_at?: boolean
+    deleted_at?: boolean
     created_at?: boolean
     updated_at?: boolean
     folder?: boolean | Note$folderArgs<ExtArgs>
@@ -2712,6 +2720,7 @@ export namespace Prisma {
     is_public?: boolean
     public_slug?: boolean
     reminder_at?: boolean
+    deleted_at?: boolean
     created_at?: boolean
     updated_at?: boolean
     folder?: boolean | Note$folderArgs<ExtArgs>
@@ -2726,6 +2735,7 @@ export namespace Prisma {
     is_public?: boolean
     public_slug?: boolean
     reminder_at?: boolean
+    deleted_at?: boolean
     created_at?: boolean
     updated_at?: boolean
     folder?: boolean | Note$folderArgs<ExtArgs>
@@ -2740,11 +2750,12 @@ export namespace Prisma {
     is_public?: boolean
     public_slug?: boolean
     reminder_at?: boolean
+    deleted_at?: boolean
     created_at?: boolean
     updated_at?: boolean
   }
 
-  export type NoteOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "user_id" | "folder_id" | "title" | "content" | "is_public" | "public_slug" | "reminder_at" | "created_at" | "updated_at", ExtArgs["result"]["note"]>
+  export type NoteOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "user_id" | "folder_id" | "title" | "content" | "is_public" | "public_slug" | "reminder_at" | "deleted_at" | "created_at" | "updated_at", ExtArgs["result"]["note"]>
   export type NoteInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     folder?: boolean | Note$folderArgs<ExtArgs>
     attachments?: boolean | Note$attachmentsArgs<ExtArgs>
@@ -2774,6 +2785,7 @@ export namespace Prisma {
       is_public: boolean
       public_slug: string | null
       reminder_at: Date | null
+      deleted_at: Date | null
       created_at: Date
       updated_at: Date
     }, ExtArgs["result"]["note"]>
@@ -3210,6 +3222,7 @@ export namespace Prisma {
     readonly is_public: FieldRef<"Note", 'Boolean'>
     readonly public_slug: FieldRef<"Note", 'String'>
     readonly reminder_at: FieldRef<"Note", 'DateTime'>
+    readonly deleted_at: FieldRef<"Note", 'DateTime'>
     readonly created_at: FieldRef<"Note", 'DateTime'>
     readonly updated_at: FieldRef<"Note", 'DateTime'>
   }
@@ -6945,6 +6958,7 @@ export namespace Prisma {
     is_public: 'is_public',
     public_slug: 'public_slug',
     reminder_at: 'reminder_at',
+    deleted_at: 'deleted_at',
     created_at: 'created_at',
     updated_at: 'updated_at'
   };
@@ -7153,6 +7167,7 @@ export namespace Prisma {
     is_public?: BoolFilter<"Note"> | boolean
     public_slug?: StringNullableFilter<"Note"> | string | null
     reminder_at?: DateTimeNullableFilter<"Note"> | Date | string | null
+    deleted_at?: DateTimeNullableFilter<"Note"> | Date | string | null
     created_at?: DateTimeFilter<"Note"> | Date | string
     updated_at?: DateTimeFilter<"Note"> | Date | string
     folder?: XOR<FolderNullableScalarRelationFilter, FolderWhereInput> | null
@@ -7169,6 +7184,7 @@ export namespace Prisma {
     is_public?: SortOrder
     public_slug?: SortOrderInput | SortOrder
     reminder_at?: SortOrderInput | SortOrder
+    deleted_at?: SortOrderInput | SortOrder
     created_at?: SortOrder
     updated_at?: SortOrder
     folder?: FolderOrderByWithRelationInput
@@ -7188,6 +7204,7 @@ export namespace Prisma {
     content?: StringNullableFilter<"Note"> | string | null
     is_public?: BoolFilter<"Note"> | boolean
     reminder_at?: DateTimeNullableFilter<"Note"> | Date | string | null
+    deleted_at?: DateTimeNullableFilter<"Note"> | Date | string | null
     created_at?: DateTimeFilter<"Note"> | Date | string
     updated_at?: DateTimeFilter<"Note"> | Date | string
     folder?: XOR<FolderNullableScalarRelationFilter, FolderWhereInput> | null
@@ -7204,6 +7221,7 @@ export namespace Prisma {
     is_public?: SortOrder
     public_slug?: SortOrderInput | SortOrder
     reminder_at?: SortOrderInput | SortOrder
+    deleted_at?: SortOrderInput | SortOrder
     created_at?: SortOrder
     updated_at?: SortOrder
     _count?: NoteCountOrderByAggregateInput
@@ -7223,6 +7241,7 @@ export namespace Prisma {
     is_public?: BoolWithAggregatesFilter<"Note"> | boolean
     public_slug?: StringNullableWithAggregatesFilter<"Note"> | string | null
     reminder_at?: DateTimeNullableWithAggregatesFilter<"Note"> | Date | string | null
+    deleted_at?: DateTimeNullableWithAggregatesFilter<"Note"> | Date | string | null
     created_at?: DateTimeWithAggregatesFilter<"Note"> | Date | string
     updated_at?: DateTimeWithAggregatesFilter<"Note"> | Date | string
   }
@@ -7453,6 +7472,7 @@ export namespace Prisma {
     is_public?: boolean
     public_slug?: string | null
     reminder_at?: Date | string | null
+    deleted_at?: Date | string | null
     created_at?: Date | string
     updated_at?: Date | string
     folder?: FolderCreateNestedOneWithoutNotesInput
@@ -7469,6 +7489,7 @@ export namespace Prisma {
     is_public?: boolean
     public_slug?: string | null
     reminder_at?: Date | string | null
+    deleted_at?: Date | string | null
     created_at?: Date | string
     updated_at?: Date | string
     attachments?: AttachmentUncheckedCreateNestedManyWithoutNoteInput
@@ -7483,6 +7504,7 @@ export namespace Prisma {
     is_public?: BoolFieldUpdateOperationsInput | boolean
     public_slug?: NullableStringFieldUpdateOperationsInput | string | null
     reminder_at?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deleted_at?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     created_at?: DateTimeFieldUpdateOperationsInput | Date | string
     updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
     folder?: FolderUpdateOneWithoutNotesNestedInput
@@ -7499,6 +7521,7 @@ export namespace Prisma {
     is_public?: BoolFieldUpdateOperationsInput | boolean
     public_slug?: NullableStringFieldUpdateOperationsInput | string | null
     reminder_at?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deleted_at?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     created_at?: DateTimeFieldUpdateOperationsInput | Date | string
     updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
     attachments?: AttachmentUncheckedUpdateManyWithoutNoteNestedInput
@@ -7514,6 +7537,7 @@ export namespace Prisma {
     is_public?: boolean
     public_slug?: string | null
     reminder_at?: Date | string | null
+    deleted_at?: Date | string | null
     created_at?: Date | string
     updated_at?: Date | string
   }
@@ -7526,6 +7550,7 @@ export namespace Prisma {
     is_public?: BoolFieldUpdateOperationsInput | boolean
     public_slug?: NullableStringFieldUpdateOperationsInput | string | null
     reminder_at?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deleted_at?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     created_at?: DateTimeFieldUpdateOperationsInput | Date | string
     updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -7539,6 +7564,7 @@ export namespace Prisma {
     is_public?: BoolFieldUpdateOperationsInput | boolean
     public_slug?: NullableStringFieldUpdateOperationsInput | string | null
     reminder_at?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deleted_at?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     created_at?: DateTimeFieldUpdateOperationsInput | Date | string
     updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -7868,6 +7894,7 @@ export namespace Prisma {
     is_public?: SortOrder
     public_slug?: SortOrder
     reminder_at?: SortOrder
+    deleted_at?: SortOrder
     created_at?: SortOrder
     updated_at?: SortOrder
   }
@@ -7881,6 +7908,7 @@ export namespace Prisma {
     is_public?: SortOrder
     public_slug?: SortOrder
     reminder_at?: SortOrder
+    deleted_at?: SortOrder
     created_at?: SortOrder
     updated_at?: SortOrder
   }
@@ -7894,6 +7922,7 @@ export namespace Prisma {
     is_public?: SortOrder
     public_slug?: SortOrder
     reminder_at?: SortOrder
+    deleted_at?: SortOrder
     created_at?: SortOrder
     updated_at?: SortOrder
   }
@@ -8584,6 +8613,7 @@ export namespace Prisma {
     is_public?: boolean
     public_slug?: string | null
     reminder_at?: Date | string | null
+    deleted_at?: Date | string | null
     created_at?: Date | string
     updated_at?: Date | string
     attachments?: AttachmentCreateNestedManyWithoutNoteInput
@@ -8598,6 +8628,7 @@ export namespace Prisma {
     is_public?: boolean
     public_slug?: string | null
     reminder_at?: Date | string | null
+    deleted_at?: Date | string | null
     created_at?: Date | string
     updated_at?: Date | string
     attachments?: AttachmentUncheckedCreateNestedManyWithoutNoteInput
@@ -8701,6 +8732,7 @@ export namespace Prisma {
     is_public?: BoolFilter<"Note"> | boolean
     public_slug?: StringNullableFilter<"Note"> | string | null
     reminder_at?: DateTimeNullableFilter<"Note"> | Date | string | null
+    deleted_at?: DateTimeNullableFilter<"Note"> | Date | string | null
     created_at?: DateTimeFilter<"Note"> | Date | string
     updated_at?: DateTimeFilter<"Note"> | Date | string
   }
@@ -8862,6 +8894,7 @@ export namespace Prisma {
     is_public?: boolean
     public_slug?: string | null
     reminder_at?: Date | string | null
+    deleted_at?: Date | string | null
     created_at?: Date | string
     updated_at?: Date | string
     folder?: FolderCreateNestedOneWithoutNotesInput
@@ -8877,6 +8910,7 @@ export namespace Prisma {
     is_public?: boolean
     public_slug?: string | null
     reminder_at?: Date | string | null
+    deleted_at?: Date | string | null
     created_at?: Date | string
     updated_at?: Date | string
     note_tags?: NoteTagUncheckedCreateNestedManyWithoutNoteInput
@@ -8906,6 +8940,7 @@ export namespace Prisma {
     is_public?: BoolFieldUpdateOperationsInput | boolean
     public_slug?: NullableStringFieldUpdateOperationsInput | string | null
     reminder_at?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deleted_at?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     created_at?: DateTimeFieldUpdateOperationsInput | Date | string
     updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
     folder?: FolderUpdateOneWithoutNotesNestedInput
@@ -8921,6 +8956,7 @@ export namespace Prisma {
     is_public?: BoolFieldUpdateOperationsInput | boolean
     public_slug?: NullableStringFieldUpdateOperationsInput | string | null
     reminder_at?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deleted_at?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     created_at?: DateTimeFieldUpdateOperationsInput | Date | string
     updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
     note_tags?: NoteTagUncheckedUpdateManyWithoutNoteNestedInput
@@ -8968,6 +9004,7 @@ export namespace Prisma {
     is_public?: boolean
     public_slug?: string | null
     reminder_at?: Date | string | null
+    deleted_at?: Date | string | null
     created_at?: Date | string
     updated_at?: Date | string
     folder?: FolderCreateNestedOneWithoutNotesInput
@@ -8983,6 +9020,7 @@ export namespace Prisma {
     is_public?: boolean
     public_slug?: string | null
     reminder_at?: Date | string | null
+    deleted_at?: Date | string | null
     created_at?: Date | string
     updated_at?: Date | string
     attachments?: AttachmentUncheckedCreateNestedManyWithoutNoteInput
@@ -9028,6 +9066,7 @@ export namespace Prisma {
     is_public?: BoolFieldUpdateOperationsInput | boolean
     public_slug?: NullableStringFieldUpdateOperationsInput | string | null
     reminder_at?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deleted_at?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     created_at?: DateTimeFieldUpdateOperationsInput | Date | string
     updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
     folder?: FolderUpdateOneWithoutNotesNestedInput
@@ -9043,6 +9082,7 @@ export namespace Prisma {
     is_public?: BoolFieldUpdateOperationsInput | boolean
     public_slug?: NullableStringFieldUpdateOperationsInput | string | null
     reminder_at?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deleted_at?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     created_at?: DateTimeFieldUpdateOperationsInput | Date | string
     updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
     attachments?: AttachmentUncheckedUpdateManyWithoutNoteNestedInput
@@ -9086,6 +9126,7 @@ export namespace Prisma {
     is_public?: boolean
     public_slug?: string | null
     reminder_at?: Date | string | null
+    deleted_at?: Date | string | null
     created_at?: Date | string
     updated_at?: Date | string
   }
@@ -9126,6 +9167,7 @@ export namespace Prisma {
     is_public?: BoolFieldUpdateOperationsInput | boolean
     public_slug?: NullableStringFieldUpdateOperationsInput | string | null
     reminder_at?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deleted_at?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     created_at?: DateTimeFieldUpdateOperationsInput | Date | string
     updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
     attachments?: AttachmentUpdateManyWithoutNoteNestedInput
@@ -9140,6 +9182,7 @@ export namespace Prisma {
     is_public?: BoolFieldUpdateOperationsInput | boolean
     public_slug?: NullableStringFieldUpdateOperationsInput | string | null
     reminder_at?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deleted_at?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     created_at?: DateTimeFieldUpdateOperationsInput | Date | string
     updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
     attachments?: AttachmentUncheckedUpdateManyWithoutNoteNestedInput
@@ -9154,6 +9197,7 @@ export namespace Prisma {
     is_public?: BoolFieldUpdateOperationsInput | boolean
     public_slug?: NullableStringFieldUpdateOperationsInput | string | null
     reminder_at?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deleted_at?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     created_at?: DateTimeFieldUpdateOperationsInput | Date | string
     updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
   }

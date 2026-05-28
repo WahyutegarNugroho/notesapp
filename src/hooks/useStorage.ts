@@ -1,7 +1,24 @@
 import { useState } from 'react';
 import { supabase } from '../services/supabase';
-import { validateFile } from '../utils/fileValidator';
+import { validateFile, ALLOWED_IMAGE_TYPES, ALLOWED_VIDEO_TYPES } from '../utils/fileValidator';
 import { useAuth } from '../contexts/AuthContext';
+
+const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'mp4', 'webm'];
+const ALLOWED_MIME_TYPES = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_VIDEO_TYPES];
+
+function sanitizeExtension(filename: string): string {
+  const ext = (filename.split('.').pop() || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (!ALLOWED_EXTENSIONS.includes(ext)) {
+    throw new Error('Ekstensi file tidak diizinkan');
+  }
+  return ext;
+}
+
+function generateSafeFileName(): string {
+  const arr = new Uint8Array(16);
+  crypto.getRandomValues(arr);
+  return Array.from(arr, b => b.toString(16).padStart(2, '0')).join('');
+}
 
 export const useStorage = () => {
   const [isUploading, setIsUploading] = useState(false);
@@ -20,13 +37,39 @@ export const useStorage = () => {
     }
 
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${noteId}/${Math.random()}.${fileExt}`;
-      const filePath = `${user?.id}/${fileName}`;
+      if (!user) throw new Error('User not authenticated');
 
-      const { error: uploadError, data } = await supabase.storage
+      const fileExt = sanitizeExtension(file.name);
+
+      if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+        throw new Error('Tipe MIME file tidak didukung');
+      }
+
+      let fileToUpload = file;
+      
+      // Image optimization
+      if (ALLOWED_IMAGE_TYPES.includes(file.type)) {
+        try {
+          const imageCompression = (await import('browser-image-compression')).default;
+          fileToUpload = await imageCompression(file, {
+            maxSizeMB: 1,
+            maxWidthOrHeight: 1920,
+            useWebWorker: true,
+            fileType: 'image/webp'
+          });
+        } catch (compErr) {
+          console.error("Compression error:", compErr);
+          // Fallback to original file
+        }
+      }
+
+      const safeNoteId = noteId.replace(/[^a-zA-Z0-9_-]/g, '');
+      const fileName = `${safeNoteId}/${generateSafeFileName()}.${fileExt}`;
+      const filePath = `${user.id}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
         .from('attachments')
-        .upload(filePath, file);
+        .upload(filePath, fileToUpload);
 
       if (uploadError) throw uploadError;
 
@@ -38,8 +81,9 @@ export const useStorage = () => {
         url: publicUrlData.publicUrl,
         type: file.type,
       };
-    } catch (err: any) {
-      setError(err.message || 'Terjadi kesalahan saat mengunggah file.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Terjadi kesalahan saat mengunggah file.';
+      setError(msg);
       throw err;
     } finally {
       setIsUploading(false);

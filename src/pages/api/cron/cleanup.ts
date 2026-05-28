@@ -1,39 +1,103 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '../../../lib/prisma';
 import { supabase } from '../../../services/supabase';
+import { extractStoragePathFromUrl, extractStoragePathsFromContent } from '../../../utils/extractUrls';
 
-// Harus dipanggil dengan CRON_SECRET agar tidak bisa di-trigger sembarang orang
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST' && req.method !== 'GET') {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  // Jika Anda mengonfigurasi Vercel Cron, mereka akan mengirim Authorization header khusus
-  // Untuk kesederhanaan, kita bisa menggunakan token statis di .env
   const authHeader = req.headers.authorization;
   if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return res.status(401).json({ error: 'Unauthorized Cron Trigger' });
   }
 
   try {
-    // 1. Ambil semua file yang ada di Supabase Storage (attachments bucket)
-    // Supabase JS library hanya bisa melist per folder/path, jadi ini disederhanakan
-    // Pada skala produksi, Anda perlu melakukan iterasi (pagination) untuk setiap folder (user_id).
-    
-    // Sebagai kerangka kerja dasar, kita simulasikan sukses
-    // Implementasi nyata membutuhkan:
-    // a. supabase.storage.from('attachments').list() rekursif
-    // b. prisma.attachment.findMany()
-    // c. prisma.note.findMany() -> ekstrak URL dari konten
-    // d. Filter file yang ada di (a) tapi tidak ada di (b) dan (c)
-    // e. supabase.storage.from('attachments').remove(orphans)
-
-    // Simulasi respons sukses untuk demonstrasi
-    return res.status(200).json({ 
-      success: true, 
-      message: 'Cron job cleanup endpoint siap diimplementasikan secara penuh. Saat ini sistem mengandalkan penghapusan sinkron (langsung saat catatan dihapus).' 
+    const allNotes = await prisma.note.findMany({
+      select: { id: true, content: true, user_id: true }
     });
-  } catch (error: any) {
-    return res.status(500).json({ error: error.message });
+
+    const allAttachments = await prisma.attachment.findMany({
+      select: { id: true, file_url: true, note_id: true }
+    });
+
+    const dbPaths = new Set(
+      allAttachments
+        .map(a => extractStoragePathFromUrl(a.file_url))
+        .filter(Boolean) as string[]
+    );
+
+    const inlinePaths = new Set<string>();
+    for (const note of allNotes) {
+      const paths = extractStoragePathsFromContent(note.content);
+      for (const p of paths) inlinePaths.add(p);
+    }
+
+    const activePaths = new Set([...dbPaths, ...inlinePaths]);
+
+    const userIds = [...new Set(allNotes.map(n => n.user_id))];
+
+    const storagePaths: string[] = [];
+
+    for (const userId of userIds) {
+      let offset = 0;
+      const limit = 100;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data: files, error: listError } = await supabase.storage
+          .from('attachments')
+          .list(userId, { limit, offset, sortBy: { column: 'name', order: 'asc' } });
+
+        if (listError) {
+          console.error(`Error listing storage for user ${userId}:`, listError);
+          break;
+        }
+
+        if (!files || files.length === 0) {
+          hasMore = false;
+        } else {
+          for (const file of files) {
+            if (file.name === '.emptyFolderPlaceholder') continue;
+            const fullPath = `${userId}/${file.name}`;
+            storagePaths.push(fullPath);
+          }
+          offset += files.filter(f => f.name !== '.emptyFolderPlaceholder').length;
+          if (files.length < limit) hasMore = false;
+        }
+      }
+    }
+
+    const orphanPaths = storagePaths.filter(p => !activePaths.has(p));
+
+    const deletedPaths: string[] = [];
+    if (orphanPaths.length > 0) {
+      const batchSize = 100;
+      for (let i = 0; i < orphanPaths.length; i += batchSize) {
+        const batch = orphanPaths.slice(i, i + batchSize);
+        const { error: removeError } = await supabase.storage
+          .from('attachments')
+          .remove(batch);
+
+        if (removeError) {
+          console.error(`Error removing batch starting at index ${i}:`, removeError);
+        } else {
+          deletedPaths.push(...batch);
+        }
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      totalStorageFiles: storagePaths.length,
+      totalActivePaths: activePaths.size,
+      orphansFound: orphanPaths.length,
+      deletedCount: deletedPaths.length,
+      deletedPaths: deletedPaths.slice(0, 20),
+    });
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Internal Server Error';
+    return res.status(500).json({ error: msg });
   }
 }

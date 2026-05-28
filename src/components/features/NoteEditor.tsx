@@ -72,14 +72,15 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
         try {
           const result = await uploadFile(file, tempNoteId);
           uploadedAttachments.push(result);
-        } catch (err: any) {
-          throw new Error(`Gagal mengunggah file ${file.name}: ${err.message}`);
+        } catch (err: unknown) {
+          const uploadMsg = err instanceof Error ? err.message : 'Unknown error';
+          throw new Error(`Gagal mengunggah file ${file.name}: ${uploadMsg}`);
         }
       }
       
       await onSave(title, content, uploadedAttachments, tags);
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch { 
+      toast.error('Gagal menyimpan catatan');
     } finally {
       setIsUploading(false);
     }

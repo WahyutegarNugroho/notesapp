@@ -3,6 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { AuthLayout } from '../layouts/AuthLayout';
 import { Input } from '../components/ui/input';
+import { PasswordInput } from '../components/ui/password-input';
 import { Label } from '../components/ui/label';
 import { Button } from '../components/ui/button';
 import { supabase } from '../services/supabase';
@@ -26,8 +27,8 @@ export default function Login() {
       });
 
       if (error) throw error;
-    } catch (err: any) {
-      setError(err.message || 'Terjadi kesalahan saat masuk.');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Terjadi kesalahan saat masuk.');
     } finally {
       setIsLoading(false);
     }
@@ -61,10 +62,9 @@ export default function Login() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Kata Sandi</Label>
-            <Input
+            <PasswordInput
               id="password"
               name="password"
-              type="password"
               autoComplete="current-password"
               required
               placeholder="••••••••"

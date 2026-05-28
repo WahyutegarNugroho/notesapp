@@ -1,4 +1,5 @@
 import { useEditor, EditorContent } from '@tiptap/react';
+import type { Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import TaskList from '@tiptap/extension-task-list';
@@ -12,21 +13,21 @@ import { useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import getSuggestion from './suggestion';
 
-const MenuBar = ({ editor }: { editor: any }) => {
+const MenuBar = ({ editor }: { editor: Editor | null }) => {
   const { uploadFile, isUploading } = useStorage();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !editor) return;
 
     try {
       const result = await uploadFile(file, 'temp-inline-' + Date.now());
       if (result) {
         editor.chain().focus().setImage({ src: result.url }).run();
       }
-    } catch (err: any) {
-      toast.error(err.message || 'Gagal mengunggah gambar');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Gagal mengunggah gambar');
     }
 
     if (fileInputRef.current) {
@@ -117,6 +118,7 @@ export const RichTextEditor = ({ content, onChange, noteId }: { content: string,
   const { notes } = useNotes();
 
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
       StarterKit,
       TaskList,
@@ -128,7 +130,7 @@ export const RichTextEditor = ({ content, onChange, noteId }: { content: string,
         suggestion: {
           ...getSuggestion(notes),
           char: '[',
-        } as any,
+        } as unknown as Record<string, unknown>,
         renderLabel({ options, node }) {
           return `[[${node.attrs.label ?? node.attrs.id}]]`;
         },

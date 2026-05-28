@@ -3,7 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { supabase } from '../services/supabase';
 import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
+import { PasswordInput } from '../components/ui/password-input';
 import { Label } from '../components/ui/label';
 import { BookText, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -70,9 +70,8 @@ export default function ResetPassword() {
                 Kata Sandi Baru
               </Label>
               <div className="mt-2 relative">
-                <Input
+                <PasswordInput
                   id="password"
-                  type="password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}

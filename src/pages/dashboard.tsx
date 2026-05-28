@@ -1,8 +1,9 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { DashboardLayout } from '../layouts/DashboardLayout';
 import { useNotes } from '../hooks/useNotes';
+import { useDebounce } from '../hooks/useDebounce';
 import { NoteCard } from '../components/features/NoteCard';
 import { NoteEditor } from '../components/features/NoteEditor';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../components/ui/dialog';
@@ -14,8 +15,9 @@ import { TagBadge } from '../components/features/TagBadge';
 export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTag, setActiveTag] = useState<string | null>(null);
+  const debouncedSearch = useDebounce(searchQuery, 300);
   
-  const { notes, isLoading, isLoadingMore, isReachingEnd, loadMore, createNote, addAttachment } = useNotes(searchQuery, activeTag);
+  const { notes, isLoading, isLoadingMore, isReachingEnd, loadMore, createNote, addAttachment } = useNotes(debouncedSearch, activeTag);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const router = useRouter();

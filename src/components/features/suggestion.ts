@@ -1,22 +1,51 @@
 import { ReactRenderer } from '@tiptap/react';
-// @ts-ignore
+import type { Editor } from '@tiptap/react';
 import tippy from 'tippy.js';
 import { MentionList } from './MentionList';
 
-export default function getSuggestion(notes: any[]) {
+interface SuggestionItem {
+  id: string;
+  title: string;
+  label: string;
+}
+
+interface SuggestionProps {
+  editor: Editor;
+  clientRect?: () => DOMRect;
+  items: SuggestionItem[];
+  command: (item: SuggestionItem) => void;
+}
+
+interface RendererInstance {
+  updateProps: (props: SuggestionProps) => void;
+  destroy: () => void;
+  ref?: {
+    onKeyDown: (props: { event: KeyboardEvent }) => boolean;
+  };
+  element: HTMLElement;
+}
+
+interface SuggestionPopup {
+  destroy: () => void;
+  hide: () => void;
+  setProps: (props: Record<string, unknown>) => void;
+}
+
+export default function getSuggestion(notes: Array<{ id: string; title: string }>) {
   return {
-    items: ({ query }: { query: string }) => {
+    items: ({ query }: { query: string }): SuggestionItem[] => {
       return notes
         .filter(item => item.title.toLowerCase().includes(query.toLowerCase()))
-        .slice(0, 5);
+        .slice(0, 5)
+        .map(item => ({ id: item.id, title: item.title, label: item.title }));
     },
 
     render: () => {
-      let component: any;
-      let popup: any;
+      let component: ReactRenderer | null = null;
+      let popup: SuggestionPopup[] | null = null;
 
       return {
-        onStart: (props: any) => {
+        onStart: (props: SuggestionProps) => {
           component = new ReactRenderer(MentionList, {
             props,
             editor: props.editor,
@@ -34,33 +63,33 @@ export default function getSuggestion(notes: any[]) {
             interactive: true,
             trigger: 'manual',
             placement: 'bottom-start',
-          });
+          }) as unknown as SuggestionPopup[];
         },
 
-        onUpdate(props: any) {
-          component.updateProps(props);
+        onUpdate(props: SuggestionProps) {
+          component?.updateProps(props);
 
-          if (!props.clientRect) {
+          if (!props.clientRect || !popup) {
             return;
           }
 
-          popup[0].setProps({
+          popup[0]?.setProps({
             getReferenceClientRect: props.clientRect,
           });
         },
 
-        onKeyDown(props: any) {
-          if (props.event.key === 'Escape') {
-            popup[0].hide();
+        onKeyDown(props: { event: KeyboardEvent }) {
+          if (props.event.key === 'Escape' && popup) {
+            popup[0]?.hide();
             return true;
           }
 
-          return component.ref?.onKeyDown(props);
+          return (component?.ref as RendererInstance['ref'] | undefined)?.onKeyDown(props) ?? false;
         },
 
         onExit() {
-          popup[0].destroy();
-          component.destroy();
+          popup?.[0]?.destroy();
+          component?.destroy();
         },
       };
     },

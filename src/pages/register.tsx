@@ -3,6 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { AuthLayout } from '../layouts/AuthLayout';
 import { Input } from '../components/ui/input';
+import { PasswordInput } from '../components/ui/password-input';
 import { Label } from '../components/ui/label';
 import { Button } from '../components/ui/button';
 import { supabase } from '../services/supabase';
@@ -36,8 +37,8 @@ export default function Register() {
       if (signUpError) throw signUpError;
       
       setSuccess(true);
-    } catch (err: any) {
-      setError(err.message || 'Terjadi kesalahan saat mendaftar.');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Terjadi kesalahan saat mendaftar.');
     } finally {
       setIsLoading(false);
     }
@@ -95,10 +96,9 @@ export default function Register() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Kata Sandi <span className="text-zinc-400 font-normal">(Min. 6 karakter)</span></Label>
-              <Input
+              <PasswordInput
                 id="password"
                 name="password"
-                type="password"
                 autoComplete="new-password"
                 required
                 minLength={6}

@@ -20,6 +20,7 @@ model Folder {
   children    Folder[]  @relation("FolderToFolder")
   notes       Note[]
 
+  @@index([user_id])
   @@map("folders")
 }
 
@@ -32,6 +33,7 @@ model Note {
   is_public   Boolean      @default(false)
   public_slug String?      @unique 
   reminder_at DateTime?    
+  deleted_at  DateTime?    
   created_at  DateTime     @default(now()) 
   updated_at  DateTime     @default(now()) @updatedAt 
 
@@ -39,6 +41,9 @@ model Note {
   attachments Attachment[]
   note_tags   NoteTag[]
 
+  @@index([user_id])
+  @@index([folder_id])
+  @@index([created_at(sort: Desc), id(sort: Desc)])
   @@map("notes")
 }
 
@@ -51,6 +56,7 @@ model Attachment {
 
   note       Note     @relation(fields: [note_id], references: [id], onDelete: Cascade)
 
+  @@index([note_id])
   @@map("attachments")
 }
 
@@ -61,6 +67,8 @@ model Tag {
 
   note_tags  NoteTag[]
 
+  @@index([user_id])
+  @@index([name])
   @@map("tags")
 }
 

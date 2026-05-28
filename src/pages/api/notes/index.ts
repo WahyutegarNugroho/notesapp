@@ -1,28 +1,24 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '../../../lib/prisma';
-import { supabase } from '../../../services/supabase';
 import { NoteCreateSchema } from '../../../lib/validations';
 import { z } from 'zod';
+import type { Prisma } from '../../../generated/client';
+import { requireAuth } from '../../../lib/apiAuth';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) {
-    return res.status(401).json({ error: 'Missing Authorization header' });
-  }
-
-  const token = authHeader.split(' ')[1];
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-
-  if (authError || !user) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
+  const user = await requireAuth(req, res);
+  if (!user) return;
 
   if (req.method === 'GET') {
     try {
-      const search = req.query.search as string;
-      const tag = req.query.tag as string;
+      const search = req.query.search as string | undefined;
+      const tag = req.query.tag as string | undefined;
 
-      const whereClause: any = { user_id: user.id };
+      const trashed = req.query.trashed === 'true';
+      const whereClause: Prisma.NoteWhereInput = {
+        user_id: user.id,
+        deleted_at: trashed ? { not: null } : null,
+      };
 
       if (search) {
         whereClause.OR = [
@@ -39,9 +35,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         };
       }
 
-      const cursor = req.query.cursor as string;
+      const cursor = req.query.cursor as string | undefined;
       const limit = 10;
-      const queryArgs: any = {
+      const queryArgs: Prisma.NoteFindManyArgs = {
         where: whereClause,
         take: limit + 1,
         include: {
@@ -50,7 +46,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             include: { tag: true },
           },
         },
-        orderBy: { created_at: 'desc' },
+        orderBy: [
+          { created_at: 'desc' },
+          { id: 'desc' }
+        ],
       };
 
       if (cursor) {
@@ -66,8 +65,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
       
       return res.status(200).json({ notes, nextCursor });
-    } catch (error: any) {
-      return res.status(500).json({ error: error.message });
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : 'Internal Server Error';
+      return res.status(500).json({ error: msg });
     }
   }
 
@@ -75,31 +75,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
       const parsedBody = NoteCreateSchema.parse(req.body);
       
-      const createData: any = {
+      const createData: Prisma.NoteUncheckedCreateInput = {
         title: parsedBody.title,
         content: parsedBody.content,
         user_id: user.id,
       };
 
       if (parsedBody.tags && parsedBody.tags.length > 0) {
-        // Cari tag yang sudah ada untuk user ini
         const existingTags = await prisma.tag.findMany({
           where: {
             user_id: user.id,
             name: { in: parsedBody.tags }
           }
         });
-        const existingTagNames = existingTags.map((t: any) => t.name);
+        const existingTagNames = existingTags.map(t => t.name);
         
-        // Buat tag yang belum ada
-        const missingTags = parsedBody.tags.filter((t: string) => !existingTagNames.includes(t));
+        const missingTags = parsedBody.tags.filter(t => !existingTagNames.includes(t));
         if (missingTags.length > 0) {
           await prisma.tag.createMany({
-            data: missingTags.map((t: string) => ({ user_id: user.id, name: t }))
+            data: missingTags.map(t => ({ user_id: user.id, name: t }))
           });
         }
         
-        // Ambil semua tag (baik yang baru dibuat maupun yang sudah ada)
         const allTags = await prisma.tag.findMany({
           where: {
             user_id: user.id,
@@ -108,7 +105,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
 
         createData.note_tags = {
-          create: allTags.map((t: any) => ({
+          create: allTags.map(t => ({
             tag: {
               connect: { id: t.id }
             }
@@ -126,11 +123,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       });
       return res.status(201).json(note);
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: (error as any).errors[0].message });
+        return res.status(400).json({ error: error.issues[0].message });
       }
-      return res.status(500).json({ error: error.message });
+      const msg = error instanceof Error ? error.message : 'Internal Server Error';
+      return res.status(500).json({ error: msg });
     }
   }
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import Head from 'next/head';
-import { GetServerSideProps } from 'next';
+import type { GetServerSideProps } from 'next';
 import { prisma } from '../../lib/prisma';
 import { BookText } from 'lucide-react';
 import { format } from 'date-fns';
@@ -8,9 +8,10 @@ import { id as idLocale } from 'date-fns/locale';
 import { TagBadge } from '../../components/features/TagBadge';
 import { MediaPreview } from '../../components/features/MediaPreview';
 import Link from 'next/link';
+import type { NoteWithRelations, SerializedAttachment, SerializedNoteTag } from '../../types/frontend';
 
 interface PublicNoteProps {
-  note: any; // Using any for simplicity in serializable format
+  note: NoteWithRelations | null;
   error?: string;
 }
 
@@ -65,7 +66,7 @@ export default function PublicNote({ note, error }: PublicNoteProps) {
               <div className="mb-12">
                 <h3 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4">Tag</h3>
                 <div className="flex flex-wrap gap-2">
-                  {note.note_tags.map((nt: any) => (
+                  {note.note_tags.map((nt) => (
                     <TagBadge key={nt.tag.id} name={nt.tag.name} />
                   ))}
                 </div>
@@ -79,7 +80,7 @@ export default function PublicNote({ note, error }: PublicNoteProps) {
                   Lampiran ({note.attachments.length})
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {note.attachments.map((att: any) => (
+                  {note.attachments.map((att) => (
                     <div key={att.id} className="relative rounded-xl overflow-hidden border border-border">
                       <MediaPreview fileUrl={att.file_url} fileType={att.file_type} />
                     </div>
@@ -124,15 +125,33 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       return { props: { error: 'Not found' } };
     }
 
-    // Convert dates to strings for Next.js JSON serialization
-    const safeNote = {
-      ...note,
+    const safeNote: NoteWithRelations = {
+      id: note.id,
+      user_id: note.user_id,
+      folder_id: note.folder_id,
+      title: note.title,
+      content: note.content,
+      is_public: note.is_public,
+      public_slug: note.public_slug,
+      reminder_at: note.reminder_at ? note.reminder_at.toISOString() : null,
       created_at: note.created_at.toISOString(),
       updated_at: note.updated_at.toISOString(),
       attachments: note.attachments.map(a => ({
-        ...a,
+        id: a.id,
+        note_id: a.note_id,
+        file_url: a.file_url,
+        file_type: a.file_type,
         created_at: a.created_at.toISOString(),
-      }))
+      })),
+      note_tags: note.note_tags.map(nt => ({
+        note_id: nt.note_id,
+        tag_id: nt.tag_id,
+        tag: {
+          id: nt.tag.id,
+          user_id: nt.tag.user_id,
+          name: nt.tag.name,
+        },
+      })),
     };
 
     return {
