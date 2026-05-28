@@ -8,7 +8,7 @@ import { id as idLocale } from 'date-fns/locale';
 import { TagBadge } from '../../components/features/TagBadge';
 import { MediaPreview } from '../../components/features/MediaPreview';
 import Link from 'next/link';
-import type { NoteWithRelations, SerializedAttachment, SerializedNoteTag } from '../../types/frontend';
+import type { NoteWithRelations } from '../../types/frontend';
 
 interface PublicNoteProps {
   note: NoteWithRelations | null;
@@ -159,7 +159,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         note: safeNote
       }
     };
-  } catch (error) {
+  } catch {
     return { props: { error: 'Internal Server Error' } };
   }
 };

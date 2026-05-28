@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useSyncExternalStore } from 'react';
 
 interface ThemePaletteContextType {
   palette: string;
@@ -11,15 +11,21 @@ const ThemePaletteContext = createContext<ThemePaletteContextType>({
 });
 
 export const ThemePaletteProvider = ({ children }: { children: React.ReactNode }) => {
-  const [palette, setPaletteState] = useState('default');
-  const [mounted, setMounted] = useState(false);
+  const [palette, setPaletteState] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('theme-palette') || 'default';
+    }
+    return 'default';
+  });
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
 
   useEffect(() => {
-    setMounted(true);
-    const saved = localStorage.getItem('theme-palette') || 'default';
-    setPaletteState(saved);
-    document.documentElement.setAttribute('data-theme', saved);
-  }, []);
+    document.documentElement.setAttribute('data-theme', palette);
+  }, [palette]);
 
   const setPalette = (newPalette: string) => {
     setPaletteState(newPalette);
@@ -27,7 +33,6 @@ export const ThemePaletteProvider = ({ children }: { children: React.ReactNode }
     document.documentElement.setAttribute('data-theme', newPalette);
   };
 
-  // Prevent hydration mismatch by rendering default immediately, but actually we can just render children
   return (
     <ThemePaletteContext.Provider value={{ palette: mounted ? palette : 'default', setPalette }}>
       {children}

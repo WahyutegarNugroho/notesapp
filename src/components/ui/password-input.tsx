@@ -2,9 +2,7 @@ import React, { useState } from 'react';
 import { Input } from './input';
 import { Eye, EyeOff } from 'lucide-react';
 
-interface PasswordInputProps extends React.ComponentProps<typeof Input> {}
-
-export const PasswordInput = (props: PasswordInputProps) => {
+export const PasswordInput = (props: React.ComponentProps<typeof Input>) => {
   const [showPassword, setShowPassword] = useState(false);
 
   return (

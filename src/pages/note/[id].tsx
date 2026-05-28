@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import Image from 'next/image';
 import { DashboardLayout } from '../../layouts/DashboardLayout';
 import { RichTextEditor } from '../../components/features/RichTextEditor';
 import { ConfirmDialog } from '../../components/ui/confirm-dialog';
@@ -15,43 +16,72 @@ import { useFolders } from '../../hooks/useFolders';
 import { useStorage } from '../../hooks/useStorage';
 import { nanoid } from 'nanoid';
 import { apiFetch } from '../../utils/apiFetch';
+import type { NoteWithRelations, FolderWithChildren } from '../../types/frontend';
 
 export default function NoteDetail() {
   const router = useRouter();
   const { id } = router.query;
   const { session, isLoading: authLoading } = useAuth();
-  
+
   const { note, isLoading: isFetching, updateNote, deleteNote: deleteNoteApi } = useNote(id as string);
   const { folders } = useFolders();
   const { uploadFile } = useStorage();
 
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [isPublic, setIsPublic] = useState(false);
-  const [publicSlug, setPublicSlug] = useState('');
-  const [folderId, setFolderId] = useState<string | null>(null);
-  const [reminderAt, setReminderAt] = useState<Date | null>(null);
+  useEffect(() => {
+    if (!authLoading && !session) {
+      router.push('/');
+    }
+  }, [session, authLoading, router]);
+
+  if (authLoading || isFetching) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-full min-h-[50vh]">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  return (
+    <DashboardLayout>
+      <NoteEditorContent
+        key={note?.id || 'new'}
+        note={note}
+        folders={folders}
+        updateNote={updateNote}
+        deleteNote={deleteNoteApi}
+        uploadFile={uploadFile}
+      />
+    </DashboardLayout>
+  );
+}
+
+interface NoteEditorContentProps {
+  note: NoteWithRelations | null | undefined;
+  folders: FolderWithChildren[];
+  updateNote: (updates: Partial<NoteWithRelations>) => Promise<NoteWithRelations | undefined>;
+  deleteNote: () => Promise<void>;
+  uploadFile: (file: File, noteId: string) => Promise<{ url: string; type: string } | undefined>;
+}
+
+function NoteEditorContent({ note, folders, updateNote, deleteNote: deleteNoteApi, uploadFile }: NoteEditorContentProps) {
+  const router = useRouter();
+  const { id } = router.query;
+
+  const [title, setTitle] = useState(note?.title || '');
+  const [content, setContent] = useState(note?.content || '');
+  const [isPublic, setIsPublic] = useState(note?.is_public || false);
+  const [publicSlug, setPublicSlug] = useState(note?.public_slug || '');
+  const [folderId, setFolderId] = useState<string | null>(note?.folder_id || null);
+  const [reminderAt, setReminderAt] = useState<Date | null>(note?.reminder_at ? new Date(note.reminder_at) : null);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [attachments, setAttachments] = useState<Array<{ id: string; file_url: string; file_type: string }>>([]);
+  const [attachments, setAttachments] = useState<Array<{ id: string; file_url: string; file_type: string }>>(note?.attachments || []);
   const [isUploadAttachment, setIsUploadAttachment] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Sync note data to local state once loaded
-  useEffect(() => {
-    if (note) {
-      setTitle(note.title || '');
-      setContent(note.content || '');
-      setIsPublic(note.is_public || false);
-      setPublicSlug(note.public_slug || '');
-      setFolderId(note.folder_id || null);
-      setReminderAt(note.reminder_at ? new Date(note.reminder_at) : null);
-      setAttachments(note.attachments || []);
-    }
-  }, [note]);
-
-  // Refs for tracking changes
   const titleRef = useRef(title);
   const contentRef = useRef(content);
   const isPublicRef = useRef(isPublic);
@@ -69,13 +99,7 @@ export default function NoteDetail() {
     reminderAtRef.current = reminderAt;
   }, [title, content, isPublic, publicSlug, folderId, reminderAt]);
 
-  useEffect(() => {
-    if (!authLoading && !session) {
-      router.push('/');
-    }
-  }, [session, authLoading, router]);
-
-  const saveNote = async () => {
+  const saveNote = useCallback(async () => {
     if (isSavingRef.current) return;
     if (!titleRef.current.trim()) {
       toast.error('Judul tidak boleh kosong');
@@ -98,7 +122,7 @@ export default function NoteDetail() {
       isSavingRef.current = false;
       setIsSaving(false);
     }
-  };
+  }, [updateNote]);
 
   const handleDeleteNote = async () => {
     setIsDeleting(true);
@@ -113,15 +137,14 @@ export default function NoteDetail() {
     }
   };
 
-  // Auto-save with guard against concurrent saves
   useEffect(() => {
-    if (isFetching || !note) return;
+    if (!note) return;
 
     const timeoutId = setTimeout(() => {
       if (isSavingRef.current) return;
 
-      const hasChanges = 
-        title !== note.title || 
+      const hasChanges =
+        title !== note.title ||
         content !== (note.content || '') ||
         isPublic !== (note.is_public || false) ||
         publicSlug !== (note.public_slug || '') ||
@@ -134,7 +157,7 @@ export default function NoteDetail() {
     }, 2000);
 
     return () => clearTimeout(timeoutId);
-  }, [title, content, isPublic, publicSlug, folderId, reminderAt, isFetching, note]);
+  }, [title, content, isPublic, publicSlug, folderId, reminderAt, note, saveNote]);
 
   const togglePublicStatus = async () => {
     if (isSavingRef.current) return;
@@ -175,7 +198,7 @@ export default function NoteDetail() {
         setAttachments(prev => [...prev, newAtt]);
         toast.success('Lampiran berhasil ditambahkan');
       }
-    } catch (err) {
+    } catch {
       toast.error('Gagal mengunggah lampiran');
     } finally {
       setIsUploadAttachment(false);
@@ -188,23 +211,13 @@ export default function NoteDetail() {
       await apiFetch(`/api/notes/attachments/${attachmentId}`, { method: 'DELETE' });
       setAttachments(prev => prev.filter(a => a.id !== attachmentId));
       toast.success('Lampiran berhasil dihapus');
-    } catch (err) {
+    } catch {
       toast.error('Gagal menghapus lampiran');
     }
   };
 
-  if (authLoading || isFetching) {
-    return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-full min-h-[50vh]">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        </div>
-      </DashboardLayout>
-    );
-  }
-
   return (
-    <DashboardLayout>
+    <>
       <Head>
         <title>{title || 'Catatan Baru'} - NotesApp</title>
       </Head>
@@ -215,11 +228,11 @@ export default function NoteDetail() {
             <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard')} className="text-muted-foreground">
               <ArrowLeft className="w-4 h-4 mr-2" /> Kembali
             </Button>
-            
+
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-              <Button 
-                size="sm" 
-                variant="outline" 
+              <Button
+                size="sm"
+                variant="outline"
                 onClick={async () => {
                   const TurndownService = (await import('turndown')).default;
                   const turndownService = new TurndownService({ headingStyle: 'atx' });
@@ -236,14 +249,14 @@ export default function NoteDetail() {
               >
                 <span className="hidden sm:inline">Export MD</span>
               </Button>
-              <Button 
-                size="sm" 
-                variant="outline" 
+              <Button
+                size="sm"
+                variant="outline"
                 onClick={async () => {
                   const html2pdf = (await import('html2pdf.js')).default;
                   const element = document.querySelector('.tiptap-content');
                   if (!element) return;
-                  
+
                   const opt = {
                     margin:       1,
                     filename:     `${title}.pdf`,
@@ -251,33 +264,33 @@ export default function NoteDetail() {
                     html2canvas:  { scale: 2 },
                     jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' as const }
                   };
-                  
+
                   html2pdf().set(opt).from(element as HTMLElement).save();
                   toast.success('Mengekspor ke PDF...');
                 }}
               >
                 <span className="hidden sm:inline">Export PDF</span>
               </Button>
-              <Button 
-                size="sm" 
-                variant={isPublic ? "default" : "outline"} 
+              <Button
+                size="sm"
+                variant={isPublic ? "default" : "outline"}
                 className={isPublic ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""}
                 onClick={togglePublicStatus}
               >
                 {isPublic ? <Globe className="w-4 h-4 mr-2" /> : <Lock className="w-4 h-4 mr-2" />}
                 <span className="hidden sm:inline">{isPublic ? 'Publik' : 'Privat'}</span>
               </Button>
-              <Button 
-                size="sm" 
-                onClick={saveNote} 
+              <Button
+                size="sm"
+                onClick={saveNote}
                 disabled={isSaving}
                 className="bg-primary hover:bg-primary/90 text-white"
               >
                 {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
                 <span className="hidden sm:inline">{isSaving ? 'Menyimpan...' : 'Simpan'}</span>
               </Button>
-              <Button 
-                size="sm" 
+              <Button
+                size="sm"
                 variant="destructive"
                 onClick={() => setIsDeleteConfirmOpen(true)}
                 className="bg-red-600 hover:bg-red-700 text-white"
@@ -287,22 +300,22 @@ export default function NoteDetail() {
               </Button>
             </div>
           </div>
-          
+
           {isPublic && (
             <div className="mt-3 p-2 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-md flex items-center justify-between text-sm">
               <span className="text-emerald-800 dark:text-emerald-300">Catatan ini dapat diakses oleh publik.</span>
               <div className="flex items-center gap-2">
-                <a 
-                  href={`/p/${publicSlug}`} 
-                  target="_blank" 
+                <a
+                  href={`/p/${publicSlug}`}
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="text-emerald-600 dark:text-emerald-400 hover:underline font-medium"
                 >
                   Lihat Halaman
                 </a>
-                <Button 
-                  size="sm" 
-                  variant="ghost" 
+                <Button
+                  size="sm"
+                  variant="ghost"
                   className="h-7 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-800/50"
                   onClick={() => {
                     navigator.clipboard.writeText(`${window.location.origin}/p/${publicSlug}`);
@@ -327,11 +340,11 @@ export default function NoteDetail() {
                 className="w-full text-3xl sm:text-4xl font-bold bg-transparent border-none outline-none text-foreground placeholder-zinc-300 dark:placeholder-zinc-700"
               />
             </div>
-            
+
             <div className="flex flex-wrap items-center gap-4 text-sm mb-6 pb-6 border-b border-border">
               <div className="flex items-center gap-2 bg-background border border-border rounded-md px-3 py-1.5 shadow-sm focus-within:ring-2 focus-within:ring-ring">
                 <Folder className="w-4 h-4 text-muted-foreground" />
-                <select 
+                <select
                   className="bg-transparent border-none outline-none text-muted-foreground cursor-pointer text-sm w-32"
                   value={folderId || ''}
                   onChange={(e) => setFolderId(e.target.value || null)}
@@ -342,7 +355,7 @@ export default function NoteDetail() {
                   ))}
                 </select>
               </div>
-              
+
               <div className="flex items-center gap-2 bg-background border border-border rounded-md px-3 py-1.5 shadow-sm focus-within:ring-2 focus-within:ring-ring z-20 relative">
                 <Bell className={`w-4 h-4 ${reminderAt ? 'text-primary' : 'text-muted-foreground'}`} />
                 <DatePicker
@@ -371,10 +384,13 @@ export default function NoteDetail() {
                     <div key={att.id} className="relative group">
                       {att.file_type.startsWith('image/') ? (
                         <div className="relative">
-                          <img
+                          <Image
                             src={att.file_url}
                             alt="Lampiran"
+                            width={96}
+                            height={96}
                             className="w-24 h-24 object-cover rounded-lg border border-border"
+                            unoptimized
                           />
                           <button
                             onClick={() => handleRemoveAttachment(att.id)}
@@ -426,7 +442,7 @@ export default function NoteDetail() {
             </div>
 
             <div className="tiptap-content bg-background p-1 rounded-lg">
-              <RichTextEditor 
+              <RichTextEditor
                 content={content}
                 onChange={setContent}
                 noteId={id as string}
@@ -447,6 +463,6 @@ export default function NoteDetail() {
         onConfirm={handleDeleteNote}
         isLoading={isDeleting}
       />
-    </DashboardLayout>
+    </>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useSyncExternalStore } from 'react';
 import Head from 'next/head';
 import { DashboardLayout } from '../layouts/DashboardLayout';
 import { Palette, CheckCircle2 } from 'lucide-react';
@@ -19,11 +19,11 @@ export default function SettingsPage() {
   const { session, isLoading } = useAuth();
   const router = useRouter();
   const { palette, setPalette } = useThemePalette();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
 
   useEffect(() => {
     if (!isLoading && !session) {

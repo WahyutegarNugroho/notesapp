@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { BookText, LogOut, Moon, Sun, Menu, X, Settings, Folder as FolderIcon, Plus, Loader2, Trash2, Pencil, Check, X as XIcon } from 'lucide-react';
@@ -20,18 +20,17 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
   const { folders, createFolder, isLoading: foldersLoading, mutateFolders } = useFolders();
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
   const [editingFolderName, setEditingFolderName] = useState('');
   const [deletingFolderId, setDeletingFolderId] = useState<string | null>(null);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
 
   const handleCreateFolder = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -126,7 +125,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     router.push('/login');
   };
 
-  const SidebarContent = () => (
+  const sidebarContent = (
     <div className="flex flex-col h-full bg-card border-r border-border">
       <div className="p-6 flex items-center gap-3 border-b border-border">
         <div className="bg-primary p-2 rounded-lg">
@@ -257,7 +256,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         fixed inset-y-0 left-0 z-50 w-72 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
-        <SidebarContent />
+        {sidebarContent}
       </div>
 
       {/* Main Content */}

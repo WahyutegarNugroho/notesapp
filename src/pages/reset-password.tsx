@@ -15,7 +15,7 @@ export default function ResetPassword() {
 
   useEffect(() => {
     // Check if the user is actually in a recovery session
-    supabase.auth.onAuthStateChange((event, session) => {
+    supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
         toast.info('Silakan masukkan kata sandi baru Anda.');
       }
