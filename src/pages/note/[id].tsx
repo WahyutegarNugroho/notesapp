@@ -445,7 +445,6 @@ function NoteEditorContent({ note, folders, updateNote, deleteNote: deleteNoteAp
               <RichTextEditor
                 content={content}
                 onChange={setContent}
-                noteId={id as string}
               />
             </div>
           </div>

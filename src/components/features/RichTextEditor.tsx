@@ -114,7 +114,7 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
   );
 };
 
-export const RichTextEditor = ({ content, onChange, noteId }: { content: string, onChange: (val: string) => void, noteId?: string }) => {
+export const RichTextEditor = ({ content, onChange }: { content: string, onChange: (val: string) => void }) => {
   const { notes } = useNotes();
 
   const editor = useEditor({
@@ -131,7 +131,7 @@ export const RichTextEditor = ({ content, onChange, noteId }: { content: string,
           ...getSuggestion(notes),
           char: '[',
         } as unknown as Record<string, unknown>,
-        renderLabel({ options, node }) {
+        renderLabel({ node }) {
           return `[[${node.attrs.label ?? node.attrs.id}]]`;
         },
       }),
